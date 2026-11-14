@@ -69,6 +69,7 @@ jobs:
       - name: Bundle release JavaScript
         run: |
           set -euo pipefail
+          node --test scripts/test-user-api-events.cjs
           npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output build/main.jsbundle --assets-dest build/bundle-assets 2>&1 | tee build/metro.log
       - name: Build iPhone app
         run: |
@@ -80,7 +81,7 @@ jobs:
             build 2>&1 | tee build/xcodebuild.log
       - name: Package unsigned IPA
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           app_path=build/DerivedData/Build/Products/Release-iphoneos/LxMusicMobile.app
           test -f "$app_path/main.jsbundle"
           test -f "$app_path/user-api-preload.js"

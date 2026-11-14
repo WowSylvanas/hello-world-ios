@@ -79,8 +79,10 @@ export type ActionsEvent = { [K in keyof Actions]: { action: K, data: Actions[K]
 export const onScriptAction = (handler: (event: ActionsEvent) => void): () => void => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   const eventEmitter = new NativeEventEmitter(UserApiModule)
-  const eventListener = eventEmitter.addListener('api-action', event => {
-    if (event.data) event.data = JSON.parse(event.data as string)
+  const eventListener = eventEmitter.addListener('api-action', rawEvent => {
+    // NativeEventEmitter shares its payload between subscribers; never mutate it.
+    const event = { ...rawEvent }
+    if (typeof event.data === 'string') event.data = JSON.parse(event.data as string)
     if (event.action == 'init') {
       if (event.data.info) event.data.info = { ...loadScriptInfo, ...event.data.info }
       else event.data.info = { ...loadScriptInfo }

@@ -8,7 +8,7 @@ Pod::Spec.new do |s|
   s.platform = :ios, '15.0'
   s.source = { :git => 'https://github.com/lyswhut/lx-music-mobile.git' }
   s.source_files = '*.{h,m}'
-  s.resources = ['user-api-preload.js', '../../src/resources/fonts/icomoon.ttf']
+  s.resources = ['user-api-preload.js', 'icomoon.ttf']
   s.frameworks = 'UIKit', 'JavaScriptCore', 'Security', 'UniformTypeIdentifiers', 'AVFoundation'
   s.dependency 'React-Core'
 end

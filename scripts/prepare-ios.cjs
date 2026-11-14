@@ -3,6 +3,7 @@ const path = require('node:path')
 const root = path.resolve(__dirname, '..')
 const copy = (from, to) => fs.copyFileSync(path.join(root, from), path.join(root, to))
 copy('android/app/src/main/assets/script/user-api-preload.js', 'ios/Port/user-api-preload.js')
+copy('src/resources/fonts/icomoon.ttf', 'ios/Port/icomoon.ttf')
 
 // Repair the upstream iOS template without changing the Android project.
 const projectFile = path.join(root, 'ios/LxMusicMobile.xcodeproj/project.pbxproj')
