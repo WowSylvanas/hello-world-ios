@@ -55,10 +55,20 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
           xcodebuild -version
       - name: Install matching iOS platform
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           mkdir -p build
-          xcodebuild -downloadPlatform iOS -buildVersion 18.2 2>&1 | tee build/platform-install.log
+          # Initialize CoreSimulator before downloading; hosted runners can fail on first contact.
+          for attempt in 1 2 3; do
+            xcrun simctl list >/dev/null || true
+            if xcodebuild -downloadPlatform iOS -buildVersion 18.2 2>&1 | tee -a build/platform-install.log; then
+              exit 0
+            fi
+            echo "iOS platform setup attempt $attempt failed; retrying in 10 seconds."
+            sleep 10
+          done
+          exit 1
       - name: Install JavaScript dependencies
         run: |
           set -euo pipefail
