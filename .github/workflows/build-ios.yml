@@ -57,7 +57,8 @@ jobs:
           test -f "$app_path/HelloWorld"
           test -f "$app_path/Info.plist"
           plutil -lint "$app_path/Info.plist"
-          lipo -verify_arch arm64 "$app_path/HelloWorld"
+          # Input files must precede -verify_arch; all following arguments are architectures.
+          lipo "$app_path/HelloWorld" -verify_arch arm64
           /usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms' "$app_path/Info.plist" | grep -q 'iPhoneOS'
           mkdir -p build/ipa/Payload
           ditto "$app_path" build/ipa/Payload/HelloWorld.app
