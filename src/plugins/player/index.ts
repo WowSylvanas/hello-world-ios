@@ -1,4 +1,4 @@
-import TrackPlayer from 'react-native-track-player'
+import TrackPlayer from '@/plugins/player/trackPlayer'
 import { updateOptions, setVolume, setPlaybackRate, migratePlayerCache } from './utils'
 
 // const listenEvent = () => {

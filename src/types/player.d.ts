@@ -1,4 +1,4 @@
-import type { Track as RNTrack } from 'react-native-track-player'
+import type { Track as RNTrack } from '@/plugins/player/trackPlayer'
 
 declare global {
   namespace LX {

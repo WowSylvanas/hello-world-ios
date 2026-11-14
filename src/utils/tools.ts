@@ -56,7 +56,7 @@ export const TEMP_FILE_PATH = temporaryDirectoryPath + '/tempFile'
 //   // return windowSize
 // }
 
-export const checkStoragePermissions = async() => PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE)
+export const checkStoragePermissions = async() => !isAndroid || PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE)
 
 export const requestStoragePermission = async() => {
   const isGranted = await checkStoragePermissions()
@@ -105,6 +105,10 @@ export const requestStoragePermission = async() => {
  * @param position 位置
  */
 export const toast = (message: string, duration: 'long' | 'short' = 'short', position: 'top' | 'center' | 'bottom' = 'bottom') => {
+  if (!isAndroid) {
+    Alert.alert('', message)
+    return
+  }
   let _duration
   switch (duration) {
     case 'long':

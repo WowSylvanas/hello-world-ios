@@ -1,0 +1,95 @@
+name: Build LX Music iOS port
+
+on:
+  push:
+    branches: [lx-ios-port]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lx-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      RCT_NEW_ARCH_ENABLED: '0'
+      NO_FLIPPER: '1'
+      USE_HERMES: '0'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          xcodebuild -version
+      - name: Install JavaScript dependencies
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          git config --global url.https://github.com/.insteadOf ssh://git@github.com/
+          npm ci --no-audit --no-fund 2>&1 | tee build/npm-install.log
+      - name: Prepare iOS dependencies
+        run: |
+          set -euo pipefail
+          node scripts/prepare-ios.cjs
+          cd ios
+          pod install --repo-update 2>&1 | tee ../build/pod-install.log
+      - name: Bundle release JavaScript
+        run: |
+          set -euo pipefail
+          npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output build/main.jsbundle --assets-dest build/bundle-assets 2>&1 | tee build/metro.log
+      - name: Build iPhone app
+        run: |
+          set -euo pipefail
+          xcodebuild -workspace ios/LxMusicMobile.xcworkspace -scheme LxMusicMobile \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData IPHONEOS_DEPLOYMENT_TARGET=15.0 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
+            build 2>&1 | tee build/xcodebuild.log
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          app_path=build/DerivedData/Build/Products/Release-iphoneos/LxMusicMobile.app
+          test -f "$app_path/main.jsbundle"
+          test -f "$app_path/user-api-preload.js"
+          test -f "$app_path/icomoon.ttf"
+          plutil -lint "$app_path/Info.plist"
+          lipo "$app_path/LxMusicMobile" -verify_arch arm64
+          mkdir -p build/ipa/Payload
+          ditto "$app_path" build/ipa/Payload/LxMusicMobile.app
+          (cd build/ipa && zip -r -y ../LXMusic-iOS-unsigned.ipa Payload)
+          unzip -t build/LXMusic-iOS-unsigned.ipa
+          shasum -a 256 build/LXMusic-iOS-unsigned.ipa > build/LXMusic-iOS-unsigned.ipa.sha256
+      - name: Upload IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: LXMusic-iOS-unsigned
+          path: |
+            build/LXMusic-iOS-unsigned.ipa
+            build/LXMusic-iOS-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: Upload build diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: LXMusic-iOS-build-logs
+          path: |
+            build/*.log
+            ios/Podfile.lock
+          if-no-files-found: ignore
+          retention-days: 3

@@ -1,4 +1,4 @@
-import TrackPlayer, { State } from 'react-native-track-player'
+import TrackPlayer, { State } from '@/plugins/player/trackPlayer'
 import BackgroundTimer from 'react-native-background-timer'
 import { defaultUrl } from '@/config'
 // import { action as playerAction } from '@/store/modules/player'

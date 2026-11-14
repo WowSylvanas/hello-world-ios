@@ -1,4 +1,4 @@
-import TrackPlayer, { Capability, Event, RepeatMode, State } from 'react-native-track-player'
+import TrackPlayer, { Capability, Event, RepeatMode, State } from '@/plugins/player/trackPlayer'
 import BackgroundTimer from 'react-native-background-timer'
 import { playMusic as handlePlayMusic } from './playList'
 import { existsFile, moveFile, privateStorageDirectoryPath, temporaryDirectoryPath } from '@/utils/fs'
