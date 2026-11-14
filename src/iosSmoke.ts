@@ -92,6 +92,12 @@ export const runSmokeTests = async() => {
     wave.writeUInt16LE(2, 32); wave.writeUInt16LE(16, 34); wave.write('data', 36); wave.writeUInt32LE(dataSize, 40)
     const audioPath = RNFS.CachesDirectoryPath + '/ios-smoke.wav'
     await RNFS.writeFile(audioPath, wave.toString('base64'), 'base64')
+    const metadata = NativeModules.LocalMediaMetadata
+    const info = await metadata.readMetadata(audioPath)
+    assert(typeof info.interval === 'number' && Math.abs(info.interval - 3) < 0.1, 'Local audio metadata duration must be numeric seconds')
+    await metadata.writeLyric(audioPath, '[00:00.00]Hello iPhone')
+    assert(await metadata.readLyric(audioPath, true) === '[00:00.00]Hello iPhone', 'Sidecar lyric round-trip failed')
+    checks.push('local WAV metadata and sidecar lyrics')
     await initial({ volume: 0, playRate: 1, cacheSize: 0, isHandleAudioFocus: true, isEnableAudioOffload: false })
     await TrackPlayer.add({ id: 'ios-smoke', url: 'file://' + audioPath, title: 'Local test fixture', artist: 'CI' })
     await TrackPlayer.play()

@@ -23,7 +23,7 @@ RCT_EXPORT_METHOD(readMetadata:(NSString *)path resolver:(RCTPromiseResolveBlock
   NSString *ext = file.pathExtension.lowercaseString;
   resolve(@{@"name":name.length ? name : file.lastPathComponent.stringByDeletingPathExtension,
     @"singer":[self metadata:asset key:AVMetadataCommonKeyArtist], @"albumName":[self metadata:asset key:AVMetadataCommonKeyAlbumName],
-    @"interval":@(seconds).stringValue, @"size":@(size), @"bitrate":@(seconds > 0 ? size * 8 / seconds / 1000 : 0).stringValue,
+    @"interval":@(seconds), @"size":@(size), @"bitrate":@(seconds > 0 ? size * 8 / seconds / 1000 : 0).stringValue,
     @"ext":ext, @"type":ext});
 }
 RCT_EXPORT_METHOD(readPic:(NSString *)path directory:(NSString *)directory resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
