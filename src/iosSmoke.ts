@@ -2,8 +2,9 @@
 import RNFS from 'react-native-fs'
 import { Buffer } from '@craftzdog/react-native-buffer'
 import { NativeModules } from 'react-native'
-import TrackPlayer from '@/plugins/player/trackPlayer'
+import TrackPlayer, { Event } from '@/plugins/player/trackPlayer'
 import { initial } from '@/plugins/player'
+import { playMusic as playQueuedMusic, getCurrentTrack, getCurrentTrackId, isTempTrack } from '@/plugins/player/playList'
 import { loadScript, onScriptAction, sendAction, destroy } from '@/utils/nativeModules/userApi'
 import { gzipFile, unGzipFile, readFile, writeFile } from '@/utils/fs'
 import { getBootLog } from '@/utils/bootLog'
@@ -50,6 +51,51 @@ const testDrawers = async() => {
   await waitFor(() => drawerStates.get('my-lists')?.visible === false, 'My lists drawer failed to close')
   setNavActiveId('nav_search')
   await pause(400)
+}
+
+const testPlaybackQueue = async(audioPath: string) => {
+  await initial({ volume: 0, playRate: 1, cacheSize: 0, isHandleAudioFocus: true, isEnableAudioOffload: false })
+  let ended = 0
+  const onEnded = () => { ended++ }
+  const errors: unknown[] = []
+  const errorSubscription = TrackPlayer.addEventListener(Event.PlaybackError, error => errors.push(error))
+  global.app_event.on('playerEnded', onEnded)
+  try {
+    for (let index = 0; index < 4; index++) {
+      const music: LX.Music.MusicInfo = {
+        id: `ios-playback-${index}`,
+        name: 'Queue fixture',
+        singer: 'CI',
+        source: 'kw',
+        interval: '00:12',
+        meta: { songId: String(index), albumName: '', qualitys: [], _qualitys: {} },
+      }
+      // Use the same playlist path as an online song after its URL is resolved,
+      // including the silent end sentinel and pruning the previous queue.
+      playQueuedMusic(music, 'file://' + audioPath, 0)
+      let ready = false
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const [track, queue, position] = await Promise.all([getCurrentTrack(), TrackPlayer.getQueue(), TrackPlayer.getPosition()])
+        if (track?.musicId === music.id && queue.length === 2 && position > 0.2) { ready = true; break }
+        await pause(100)
+      }
+      assert(ready, `Song ${index}: queue alignment or playback failed`)
+      const currentId = await getCurrentTrackId()
+      assert(currentId && !isTempTrack(currentId), 'Active song was misidentified as its silent end sentinel')
+      const duration = await TrackPlayer.getDuration()
+      assert(duration >= 11.9 && duration <= 12.1, `Unexpected AVPlayer duration: ${duration}`)
+      assert(ended === 0, 'Switching songs incorrectly emitted playerEnded')
+      assert(errors.length === 0, `Native playback errors: ${JSON.stringify(errors)}`)
+    }
+    await TrackPlayer.pause()
+    await TrackPlayer.seekTo(1)
+    await pause(300)
+    assert(Math.abs(await TrackPlayer.getPosition() - 1) < 0.25, 'AVPlayer seek failed')
+  } finally {
+    global.app_event.off('playerEnded', onEnded)
+    errorSubscription.remove()
+    await TrackPlayer.reset()
+  }
 }
 
 const testUserSource = async() => new Promise<void>((resolve, reject) => {
@@ -127,7 +173,7 @@ export const runSmokeTests = async() => {
     checks.push('JavaScriptCore source initialization, timer and request-response bridge')
 
     const sampleRate = 16000
-    const dataSize = sampleRate * 3 * 2
+    const dataSize = sampleRate * 12 * 2
     const wave = Buffer.alloc(44 + dataSize)
     wave.write('RIFF', 0); wave.writeUInt32LE(36 + dataSize, 4); wave.write('WAVEfmt ', 8)
     wave.writeUInt32LE(16, 16); wave.writeUInt16LE(1, 20); wave.writeUInt16LE(1, 22)
@@ -137,23 +183,12 @@ export const runSmokeTests = async() => {
     await RNFS.writeFile(audioPath, wave.toString('base64'), 'base64')
     const metadata = NativeModules.LocalMediaMetadata
     const info = await metadata.readMetadata(audioPath)
-    assert(typeof info.interval === 'number' && Math.abs(info.interval - 3) < 0.1, 'Local audio metadata duration must be numeric seconds')
+    assert(typeof info.interval === 'number' && Math.abs(info.interval - 12) < 0.1, 'Local audio metadata duration must be numeric seconds')
     await metadata.writeLyric(audioPath, '[00:00.00]Hello iPhone')
     assert(await metadata.readLyric(audioPath, true) === '[00:00.00]Hello iPhone', 'Sidecar lyric round-trip failed')
     checks.push('local WAV metadata and sidecar lyrics')
-    await initial({ volume: 0, playRate: 1, cacheSize: 0, isHandleAudioFocus: true, isEnableAudioOffload: false })
-    await TrackPlayer.add({ id: 'ios-smoke', url: 'file://' + audioPath, title: 'Local test fixture', artist: 'CI' })
-    await TrackPlayer.play()
-    for (let attempt = 0; attempt < 25 && await TrackPlayer.getPosition() < 0.2; attempt++) await pause(200)
-    const position = await TrackPlayer.getPosition()
-    const duration = await TrackPlayer.getDuration()
-    assert(position > 0.1 && duration >= 2.9 && duration <= 3.1, `Unexpected AVPlayer times: ${position}/${duration}`)
-    await TrackPlayer.pause()
-    await TrackPlayer.seekTo(1)
-    await pause(300)
-    assert(Math.abs(await TrackPlayer.getPosition() - 1) < 0.25, 'AVPlayer seek failed')
-    await TrackPlayer.reset()
-    checks.push('AVPlayer local playback, seconds, pause and seek')
+    await testPlaybackQueue(audioPath)
+    checks.push('application playlist: four consecutive song switches, aligned sentinel queue, no false ended events, playback, pause and seek')
     global.app_event.changeMenuVisible(true)
     await waitFor(() => drawerStates.get('home-menu')?.visible === true, 'Final menu screenshot could not open')
     await pause(300)

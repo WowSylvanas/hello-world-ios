@@ -1,4 +1,5 @@
 import TrackPlayer, { State } from '@/plugins/player/trackPlayer'
+import { Platform } from 'react-native'
 import BackgroundTimer from 'react-native-background-timer'
 import { defaultUrl } from '@/config'
 // import { action as playerAction } from '@/store/modules/player'
@@ -110,12 +111,14 @@ const buildTracks = (musicInfo: LX.Player.PlayMusic, url?: LX.Player.Track['url'
 export const isTempTrack = (trackId: string) => /\/\/default$/.test(trackId)
 
 
-export const getCurrentTrackId = async() => {
+export const getCurrentTrackId = async(): Promise<string | undefined> => {
   const currentTrackIndex = await TrackPlayer.getCurrentTrack()
+  if (Platform.OS === 'ios') return currentTrackIndex == null ? undefined : (await TrackPlayer.getTrack(currentTrackIndex))?.id as string | undefined
   return list[currentTrackIndex]?.id
 }
-export const getCurrentTrack = async() => {
+export const getCurrentTrack = async(): Promise<LX.Player.Track | undefined> => {
   const currentTrackIndex = await TrackPlayer.getCurrentTrack()
+  if (Platform.OS === 'ios') return currentTrackIndex == null ? undefined : (await TrackPlayer.getTrack(currentTrackIndex) as LX.Player.Track | null) ?? undefined
   return list[currentTrackIndex]
 }
 

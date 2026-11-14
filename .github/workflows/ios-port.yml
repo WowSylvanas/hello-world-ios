@@ -84,7 +84,7 @@ jobs:
       - name: Bundle release JavaScript
         run: |
           set -euo pipefail
-          node --test scripts/test-native-deps.cjs scripts/test-user-api-events.cjs
+          node --test scripts/test-native-deps.cjs scripts/test-user-api-events.cjs scripts/test-ios-queue.cjs
           npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output build/main.jsbundle --assets-dest build/bundle-assets 2>&1 | tee build/metro.log
       - name: Build iPhone app
         if: matrix.target == 'device'
