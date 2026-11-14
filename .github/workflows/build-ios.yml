@@ -1,0 +1,100 @@
+name: Build unsigned iOS IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build HelloWorld for iPhone
+    runs-on: macos-15
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Show Xcode version and validate project
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          plutil -lint HelloWorld.xcodeproj/project.pbxproj
+          xcodebuild -list -project HelloWorld.xcodeproj
+
+      - name: Build unsigned iPhone app
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          xcodebuild \
+            -project HelloWorld.xcodeproj \
+            -scheme HelloWorld \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee build/xcodebuild.log
+
+      - name: Package and check IPA
+        run: |
+          set -euo pipefail
+          app_path="build/DerivedData/Build/Products/Release-iphoneos/HelloWorld.app"
+          test -f "$app_path/HelloWorld"
+          test -f "$app_path/Info.plist"
+          plutil -lint "$app_path/Info.plist"
+          lipo -verify_arch arm64 "$app_path/HelloWorld"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms' "$app_path/Info.plist" | grep -q 'iPhoneOS'
+          mkdir -p build/ipa/Payload
+          ditto "$app_path" build/ipa/Payload/HelloWorld.app
+          (
+            cd build/ipa
+            /usr/bin/zip -r -y ../HelloWorld-unsigned.ipa Payload
+          )
+          unzip -t build/HelloWorld-unsigned.ipa
+          shasum -a 256 build/HelloWorld-unsigned.ipa > build/HelloWorld-unsigned.ipa.sha256
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: HelloWorld-unsigned-ipa
+          path: |
+            build/HelloWorld-unsigned.ipa
+            build/HelloWorld-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Upload build log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: HelloWorld-build-log
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Write download instructions
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
+          ## HelloWorld IPA is ready
+          Download **HelloWorld-unsigned-ipa** from this run's **Artifacts** section.
+          Extract the downloaded ZIP to get `HelloWorld-unsigned.ipa`.
+          On Windows, use Sideloadly to sign it with your own free Apple Account and install it on your iPhone.
+          The IPA is unsigned: opening it directly in Safari or Files does not install it.
+          Free signing expires after 7 days. See README.md for installation and renewal instructions.
+          SUMMARY
