@@ -43,6 +43,7 @@ export default () => {
 
   return (
     <DrawerLayoutFixed
+      testID="songlist-tags"
       ref={drawer}
       visibleNavNames={[COMPONENT_IDS.home]}
       widthPercentage={0.8}

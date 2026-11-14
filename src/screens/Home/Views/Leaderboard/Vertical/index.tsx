@@ -121,6 +121,7 @@ export default () => {
 
   return (
     <DrawerLayoutFixed
+      testID="leaderboard-categories"
       ref={drawer}
       visibleNavNames={[COMPONENT_IDS.home]}
       // drawerWidth={width}

@@ -54,10 +54,9 @@ void Promise.all([getFontSize(), windowSizeTools.init()]).then(async([fontSize])
     // import('@/utils/nativeModules/cryptoTest')
 
     await navigations.pushHomeScreen().then(() => {
-      void handlePushedHomeScreen()
       if (NativeModules.UtilsModule.smokeTestRequested) {
         void import('./iosSmoke').then(async({ runSmokeTests }) => runSmokeTests())
-      }
+      } else void handlePushedHomeScreen()
     }).catch((err: any) => {
       void tipDialog({
         title: 'Error',

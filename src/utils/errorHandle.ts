@@ -1,10 +1,12 @@
-import { Alert } from 'react-native'
+import { Alert, NativeModules } from 'react-native'
 // import { exitApp } from '@/utils/common'
 import { setJSExceptionHandler, setNativeExceptionHandler } from 'react-native-exception-handler'
 import { log } from '@/utils/log'
 import { toast } from './tools'
 
+export const smokeFatalErrors: string[] = []
 const errorHandler = (e: Error, isFatal: boolean) => {
+  if (isFatal && NativeModules.UtilsModule?.smokeTestRequested) smokeFatalErrors.push(String(e))
   const excludedErrors = [
     'Failed to construct \'Response\'',
   ]

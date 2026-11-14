@@ -35,6 +35,7 @@ const Content = () => {
 
   return (
     <DrawerLayoutFixed
+      testID="home-menu"
       ref={drawer}
       widthPercentage={0.7}
       widthPercentageMax={MAX_WIDTH}

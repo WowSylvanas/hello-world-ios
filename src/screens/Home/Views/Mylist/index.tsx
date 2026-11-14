@@ -54,6 +54,7 @@ export default () => {
 
   return (
     <DrawerLayoutFixed
+      testID="my-lists"
       ref={drawer}
       visibleNavNames={[COMPONENT_IDS.home]}
       // drawerWidth={width}

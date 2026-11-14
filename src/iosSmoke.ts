@@ -7,9 +7,50 @@ import { initial } from '@/plugins/player'
 import { loadScript, onScriptAction, sendAction, destroy } from '@/utils/nativeModules/userApi'
 import { gzipFile, unGzipFile, readFile, writeFile } from '@/utils/fs'
 import { getBootLog } from '@/utils/bootLog'
+import { setNavActiveId, updateSetting } from '@/core/common'
+import settingState from '@/store/setting/state'
+import { drawerStates } from '@/utils/iosDrawerSmoke'
+import { smokeFatalErrors } from '@/utils/errorHandle'
 
 const pause = async(ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 const assert = (condition: unknown, message: string) => { if (!condition) throw new Error(message) }
+const waitFor = async(condition: () => boolean, message: string) => {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    if (condition()) return
+    await pause(100)
+  }
+  throw new Error(message)
+}
+
+const testDrawers = async() => {
+  const originalPosition = settingState.setting['common.drawerLayoutPosition']
+  for (const position of ['left', 'right'] as const) {
+    updateSetting({ 'common.drawerLayoutPosition': position })
+    await waitFor(() => drawerStates.get('home-menu')?.position === position, 'Menu position did not update')
+    global.app_event.changeMenuVisible(true)
+    await waitFor(() => drawerStates.get('home-menu')?.visible === true, 'Home menu failed to open')
+    await pause(300)
+    assert((drawerStates.get('home-menu')?.width ?? 0) > 100, 'Home menu has no usable width')
+    global.app_event.changeMenuVisible(false)
+    await waitFor(() => drawerStates.get('home-menu')?.visible === false, 'Home menu failed to close')
+  }
+  updateSetting({ 'common.drawerLayoutPosition': originalPosition })
+  setNavActiveId('nav_setting')
+  await pause(600)
+  global.app_event.changeMenuVisible(true)
+  await waitFor(() => drawerStates.get('home-menu')?.visible === true, 'Menu failed to reopen on Settings')
+  global.app_event.changeMenuVisible(false)
+  await waitFor(() => drawerStates.get('home-menu')?.visible === false, 'Settings menu failed to close')
+  setNavActiveId('nav_love')
+  await waitFor(() => drawerStates.has('my-lists'), 'My lists drawer did not mount')
+  global.app_event.changeLoveListVisible(true)
+  await waitFor(() => drawerStates.get('my-lists')?.visible === true, 'My lists drawer failed to open')
+  await pause(300)
+  global.app_event.changeLoveListVisible(false)
+  await waitFor(() => drawerStates.get('my-lists')?.visible === false, 'My lists drawer failed to close')
+  setNavActiveId('nav_search')
+  await pause(400)
+}
 
 const testUserSource = async() => new Promise<void>((resolve, reject) => {
   const timeout = setTimeout(() => { finish(new Error('JavaScriptCore user source timed out')) }, 10_000)
@@ -62,6 +103,8 @@ export const runSmokeTests = async() => {
   const checks: string[] = ['home screen initialized']
   const reportPath = RNFS.CachesDirectoryPath + '/lx-ios-smoke.json'
   try {
+    await testDrawers()
+    checks.push('home menu opens and closes on both sides, Settings navigation and My lists drawer')
     const crypto = NativeModules.CryptoModule
     const text = 'Hello iPhone 你好'
     const input = Buffer.from(text).toString('base64')
@@ -111,6 +154,10 @@ export const runSmokeTests = async() => {
     assert(Math.abs(await TrackPlayer.getPosition() - 1) < 0.25, 'AVPlayer seek failed')
     await TrackPlayer.reset()
     checks.push('AVPlayer local playback, seconds, pause and seek')
+    global.app_event.changeMenuVisible(true)
+    await waitFor(() => drawerStates.get('home-menu')?.visible === true, 'Final menu screenshot could not open')
+    await pause(300)
+    assert(smokeFatalErrors.length === 0, `Unexpected UI errors: ${smokeFatalErrors.join('; ')}`)
     await RNFS.writeFile(reportPath, JSON.stringify({ status: 'passed', checks, boot: getBootLog() }))
   } catch (error: any) {
     await RNFS.writeFile(reportPath, JSON.stringify({ status: 'failed', checks, error: String(error), stack: error.stack, boot: getBootLog() }))

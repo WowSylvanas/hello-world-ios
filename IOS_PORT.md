@@ -29,6 +29,7 @@
 - 音频仍由上游 TrackPlayer 的 iOS AVPlayer 实现播放，启用后台音频；兼容 Android 分支特有的播放器接口。
 - 读取本地音频基本标签及封面，支持外置 LRC 歌词。
 - 停用 Android APK 自更新入口，使用独立包标识 `com.wowsylvanas.lxmusic.ios`。
+- 为主菜单、我的列表、排行榜与歌单分类提供 iOS 抽屉组件，支持左右布局、点击遮罩或向侧边滑动关闭。
 
 ## 平台限制
 
