@@ -44,7 +44,7 @@ RCT_EXPORT_METHOD(readLyric:(NSString *)path sidecar:(BOOL)sidecar resolver:(RCT
   NSString *file = [[[self path:path] stringByDeletingPathExtension] stringByAppendingPathExtension:@"lrc"];
   resolve([NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] ?: @"");
 }
-RCT_EXPORT_METHOD(writeLyric:(NSString *)path lyric:(NSString *)lyric sidecar:(BOOL)sidecar resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+RCT_EXPORT_METHOD(writeLyric:(NSString *)path lyric:(NSString *)lyric resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
   NSString *file = [[[self path:path] stringByDeletingPathExtension] stringByAppendingPathExtension:@"lrc"];
   NSError *error = nil;
   [lyric writeToFile:file atomically:YES encoding:NSUTF8StringEncoding error:&error];

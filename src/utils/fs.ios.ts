@@ -14,11 +14,13 @@ const fileInfo = (item: RNFS.ReadDirItem | RNFS.StatResult): FileType => ({
   name: item.name ?? item.path.split('/').pop() ?? '',
   path: item.path,
   size: Number(item.size),
-  lastModified: item.mtime?.getTime() ?? 0,
+  lastModified: item.mtime instanceof Date ? item.mtime.getTime() : item.mtime ?? 0,
   isFile: item.isFile(),
   isDirectory: item.isDirectory(),
-  mimeType: /\.(mp3|m4a|aac|flac|wav|ogg|aiff)$/i.test(item.path) ? 'audio/*' : undefined,
-} as FileType)
+  canRead: true,
+  data: '',
+  mimeType: /\.(mp3|m4a|aac|flac|wav|ogg|aiff)$/i.test(item.path) ? 'audio/*' : 'application/octet-stream',
+})
 export const getExternalStoragePaths = async(_isRemovable?: boolean) => [privateStorageDirectoryPath]
 export const stat = async(path: string) => fileInfo(await RNFS.stat(localPath(path)))
 export const selectManagedFolder = async(_isPersist = false) => stat(privateStorageDirectoryPath)
@@ -51,4 +53,4 @@ export const unGzipFile = async(from: string, to: string) => {
 export const gzipString = async(data: string, encoding: Encoding = 'utf8') => Buffer.from(gzip(Buffer.from(data, encoding as 'utf8'))).toString('base64')
 export const unGzipString = async(data: string, encoding: Encoding = 'utf8') => Buffer.from(ungzip(Buffer.from(data, 'base64'))).toString(encoding as 'utf8')
 export const downloadFile = (url: string, path: string, options: Omit<RNFS.DownloadFileOptions, 'fromUrl' | 'toFile'> = {}) => RNFS.downloadFile({ fromUrl: url, toFile: localPath(path), ...options })
-export const stopDownload = (jobId: number) => RNFS.stopDownload(jobId)
+export const stopDownload = (jobId: number) => { RNFS.stopDownload(jobId) }

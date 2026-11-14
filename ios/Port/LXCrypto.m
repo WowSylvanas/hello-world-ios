@@ -1,5 +1,7 @@
 #import "LXCrypto.h"
+#ifndef LX_CRYPTO_STANDALONE
 #import <React/RCTBridgeModule.h>
+#endif
 #import <CommonCrypto/CommonCrypto.h>
 #import <Security/Security.h>
 
@@ -110,6 +112,7 @@ NSString *LXRSA(NSString *text, NSString *keyString, NSString *padding, BOOL dec
   return decrypt ? [[NSString alloc] initWithData:output encoding:NSUTF8StringEncoding] : [output base64EncodedStringWithOptions:0];
 }
 
+#ifndef LX_CRYPTO_STANDALONE
 @interface CryptoModule : NSObject <RCTBridgeModule>
 @end
 @implementation CryptoModule
@@ -154,3 +157,4 @@ RCT_EXPORT_METHOD(sha1:(NSString *)text resolver:(RCTPromiseResolveBlock)resolve
   resolve(LXDigest([text dataUsingEncoding:NSUTF8StringEncoding], YES));
 }
 @end
+#endif

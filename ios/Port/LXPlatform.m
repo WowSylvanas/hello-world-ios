@@ -13,6 +13,13 @@ RCT_EXPORT_MODULE();
 + (BOOL)requiresMainQueueSetup { return YES; }
 - (dispatch_queue_t)methodQueue { return dispatch_get_main_queue(); }
 - (NSArray<NSString *> *)supportedEvents { return @[@"screen-state", @"screen-size-changed"]; }
+- (NSDictionary *)constantsToExport {
+#if TARGET_OS_SIMULATOR
+  return @{@"smokeTestRequested":@([NSProcessInfo.processInfo.environment[@"LX_IOS_SMOKE"] boolValue])};
+#else
+  return @{@"smokeTestRequested":@NO};
+#endif
+}
 RCT_EXPORT_METHOD(getSystemLocales:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
   NSString *locale = [NSLocale.preferredLanguages.firstObject ?: @"en-US" stringByReplacingOccurrencesOfString:@"-" withString:@"_"];
   // Match Android's language_country representation, including Chinese script variants.

@@ -7,6 +7,7 @@ import { exitApp } from './utils/nativeModules/utils'
 import { windowSizeTools } from './utils/windowSizeTools'
 import { listenLaunchEvent } from './navigation/regLaunchedEvent'
 import { tipDialog } from './utils/tools'
+import { NativeModules } from 'react-native'
 
 console.log('starting app...')
 listenLaunchEvent()
@@ -54,6 +55,9 @@ void Promise.all([getFontSize(), windowSizeTools.init()]).then(async([fontSize])
 
     await navigations.pushHomeScreen().then(() => {
       void handlePushedHomeScreen()
+      if (NativeModules.UtilsModule.smokeTestRequested) {
+        void import('./iosSmoke').then(async({ runSmokeTests }) => runSmokeTests())
+      }
     }).catch((err: any) => {
       void tipDialog({
         title: 'Error',

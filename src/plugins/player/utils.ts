@@ -209,7 +209,7 @@ type PlayStatus = 'None' | 'Ready' | 'Playing' | 'Paused' | 'Stopped' | 'Bufferi
 export const onStateChange = async(listener: (state: PlayStatus) => void) => {
   const sub = TrackPlayer.addEventListener(Event.PlaybackState, state => {
     let _state: PlayStatus
-    switch (state) {
+    switch (typeof state === 'object' ? state.state : state) {
       case State.Ready:
         _state = 'Ready'
         break
