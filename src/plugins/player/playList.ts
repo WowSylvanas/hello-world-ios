@@ -143,7 +143,8 @@ export const updateMetaData = async(musicInfo: LX.Player.MusicInfo, isPlay: bool
 
 export const initTrackInfo = async(musicInfo: LX.Player.PlayMusic, mInfo: LX.Player.MusicInfo) => {
   const tracks = buildTracks(musicInfo)
-  await TrackPlayer.add(tracks).then(() => list.push(...tracks))
+  await TrackPlayer.add(tracks)
+  if (Platform.OS !== 'ios') list.push(...tracks)
   const queue = await TrackPlayer.getQueue() as LX.Player.Track[]
   await TrackPlayer.skip(queue.findIndex(t => t.id == tracks[0].id))
   delayUpdateMusicInfo(mInfo)
@@ -156,7 +157,8 @@ const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time:
   const track = tracks[0]
   // await updateMusicInfo(track)
   const currentTrackIndex = await TrackPlayer.getCurrentTrack()
-  await TrackPlayer.add(tracks).then(() => list.push(...tracks))
+  await TrackPlayer.add(tracks)
+  if (Platform.OS !== 'ios') list.push(...tracks)
   const queue = await TrackPlayer.getQueue() as LX.Player.Track[]
   await TrackPlayer.skip(queue.findIndex(t => t.id == track.id))
 
@@ -183,7 +185,9 @@ const handlePlayMusic = async(musicInfo: LX.Player.PlayMusic, url: string, time:
   }
 
   if (queue.length > 2) {
-    void TrackPlayer.remove(Array(queue.length - 2).fill(null).map((_, i) => i)).then(() => list.splice(0, list.length - 2))
+    void TrackPlayer.remove(Array(queue.length - 2).fill(null).map((_, i) => i)).then(() => {
+      if (Platform.OS !== 'ios') list.splice(0, list.length - 2)
+    })
   }
 }
 let playPromise = Promise.resolve()

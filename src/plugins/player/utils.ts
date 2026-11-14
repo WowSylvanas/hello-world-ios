@@ -1,4 +1,5 @@
 import TrackPlayer, { Capability, Event, RepeatMode, State } from '@/plugins/player/trackPlayer'
+import { Platform } from 'react-native'
 import BackgroundTimer from 'react-native-background-timer'
 import { playMusic as handlePlayMusic } from './playList'
 import { existsFile, moveFile, privateStorageDirectoryPath, temporaryDirectoryPath } from '@/utils/fs'
@@ -159,6 +160,8 @@ export const getPosition = async() => TrackPlayer.getPosition()
 export const getDuration = async() => TrackPlayer.getDuration()
 export const setStop = async() => {
   await TrackPlayer.stop()
+  // SwiftAudioEx.stop clears the queue; Android keeps its silent end item.
+  if (Platform.OS === 'ios') return
   if (!isEmpty()) await TrackPlayer.skipToNext()
 }
 export const setLoop = async(loop: boolean) => TrackPlayer.setRepeatMode(loop ? RepeatMode.Off : RepeatMode.Track)

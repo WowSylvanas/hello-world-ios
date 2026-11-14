@@ -2,8 +2,8 @@
 import RNFS from 'react-native-fs'
 import { Buffer } from '@craftzdog/react-native-buffer'
 import { NativeModules } from 'react-native'
-import TrackPlayer, { Event } from '@/plugins/player/trackPlayer'
-import { initial } from '@/plugins/player'
+import TrackPlayer, { Event, RepeatMode } from '@/plugins/player/trackPlayer'
+import { initial, setStop } from '@/plugins/player'
 import { playMusic as playQueuedMusic, getCurrentTrack, getCurrentTrackId, isTempTrack } from '@/plugins/player/playList'
 import { loadScript, onScriptAction, sendAction, destroy } from '@/utils/nativeModules/userApi'
 import { gzipFile, unGzipFile, readFile, writeFile } from '@/utils/fs'
@@ -55,6 +55,7 @@ const testDrawers = async() => {
 
 const testPlaybackQueue = async(audioPath: string) => {
   await initial({ volume: 0, playRate: 1, cacheSize: 0, isHandleAudioFocus: true, isEnableAudioOffload: false })
+  await TrackPlayer.setRepeatMode(RepeatMode.Off)
   let ended = 0
   const onEnded = () => { ended++ }
   const errors: unknown[] = []
@@ -62,6 +63,10 @@ const testPlaybackQueue = async(audioPath: string) => {
   global.app_event.on('playerEnded', onEnded)
   try {
     for (let index = 0; index < 4; index++) {
+      // The app stops its previous song before resolving and playing a new URL.
+      await setStop()
+      await pause(150)
+      assert(ended === 0, 'Explicit stop incorrectly emitted playerEnded')
       const music: LX.Music.MusicInfo = {
         id: `ios-playback-${index}`,
         name: 'Queue fixture',
@@ -91,6 +96,11 @@ const testPlaybackQueue = async(audioPath: string) => {
     await TrackPlayer.seekTo(1)
     await pause(300)
     assert(Math.abs(await TrackPlayer.getPosition() - 1) < 0.25, 'AVPlayer seek failed')
+    await TrackPlayer.seekTo(11.5)
+    await TrackPlayer.play()
+    await waitFor(() => ended === 1, 'Natural completion failed to emit playerEnded')
+    await pause(400)
+    assert(ended === 1, 'Natural completion emitted duplicate ended events')
   } finally {
     global.app_event.off('playerEnded', onEnded)
     errorSubscription.remove()
@@ -188,7 +198,7 @@ export const runSmokeTests = async() => {
     assert(await metadata.readLyric(audioPath, true) === '[00:00.00]Hello iPhone', 'Sidecar lyric round-trip failed')
     checks.push('local WAV metadata and sidecar lyrics')
     await testPlaybackQueue(audioPath)
-    checks.push('application playlist: four consecutive song switches, aligned sentinel queue, no false ended events, playback, pause and seek')
+    checks.push('application playlist: four stop/play switches, aligned queue, no false ended events, pause/seek and exactly one natural completion')
     global.app_event.changeMenuVisible(true)
     await waitFor(() => drawerStates.get('home-menu')?.visible === true, 'Final menu screenshot could not open')
     await pause(300)

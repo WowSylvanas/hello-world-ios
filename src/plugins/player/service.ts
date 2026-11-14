@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import TrackPlayer, { State as TPState, Event as TPEvent } from '@/plugins/player/trackPlayer'
+import { Platform } from 'react-native'
 // import { store } from '@/store'
 // import { action as playerAction, STATUS } from '@/store/modules/player'
 import { isTempId, isEmpty } from './utils'
@@ -113,6 +114,9 @@ const registerPlaybackService = async() => {
   TrackPlayer.addEventListener(TPEvent.PlaybackTrackChanged, async info => {
     // console.log('PlaybackTrackChanged====>', info)
     global.lx.playerTrackId = (await getCurrentTrackId()) ?? ''
+    // iOS also emits this event when stop/reset clears its queue and when
+    // indexes move during removal. Neither event means the audio finished.
+    if (Platform.OS === 'ios') return
     if (info.track == null) return
     if (global.lx.isPlayedStop) return handleExitApp('Timeout Exit')
 
@@ -174,6 +178,18 @@ const registerPlaybackService = async() => {
   //   // }
   //   // store.dispatch(playerAction.playNext())
   })
+  if (Platform.OS === 'ios') {
+    TrackPlayer.addEventListener(TPEvent.PlaybackQueueEnded, async info => {
+      // Swift emits queue-ended only for a natural end. Ignore stale events
+      // after another song was selected or the queue was explicitly cleared.
+      if (info.track !== await TrackPlayer.getCurrentTrack()) return
+      if (global.lx.isPlayedStop) return handleExitApp('Timeout Exit')
+      global.app_event.playerPause()
+      global.app_event.pause()
+      global.app_event.playerEnded()
+      global.app_event.playerEmptied()
+    })
+  }
   // TrackPlayer.addEventListener('playback-queue-ended', async info => {
   //   // console.log('playback-queue-ended', info)
   //   store.dispatch(playerAction.playNext())
