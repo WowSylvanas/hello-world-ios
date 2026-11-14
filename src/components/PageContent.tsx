@@ -1,5 +1,5 @@
 // import { useEffect, useState } from 'react'
-import { View } from 'react-native'
+import { View, SafeAreaView, Platform } from 'react-native'
 import { useTheme } from '@/store/theme/hook'
 import ImageBackground from '@/components/common/ImageBackground'
 import { useWindowSize } from '@/utils/hooks'
@@ -14,6 +14,7 @@ interface Props {
 }
 
 const BLUR_RADIUS = Math.max(scaleSizeAbsHR(18), 10)
+const PageView = Platform.OS === 'ios' ? SafeAreaView : View
 
 export default ({ children }: Props) => {
   const theme = useTheme()
@@ -71,9 +72,9 @@ export default ({ children }: Props) => {
   }, [children, pic, theme, windowSize.height, windowSize.width])
 
   return (
-    <>
+    <PageView style={{ flex: 1, backgroundColor: theme['c-content-background'] }}>
       <SizeView />
       {pic ? picComponent : themeComponent}
-    </>
+    </PageView>
   )
 }

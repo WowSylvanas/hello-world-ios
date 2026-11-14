@@ -28,8 +28,13 @@ jobs:
             ios/Port/LXCrypto.m scripts/test-ios-crypto.m -o build/test-ios-crypto
           build/test-ios-crypto
   ios:
+    name: ios (${{ matrix.target }})
     runs-on: macos-15
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [device, simulator]
     env:
       RCT_NEW_ARCH_ENABLED: '0'
       NO_FLIPPER: '1'
@@ -69,9 +74,10 @@ jobs:
       - name: Bundle release JavaScript
         run: |
           set -euo pipefail
-          node --test scripts/test-user-api-events.cjs
+          node --test scripts/test-native-deps.cjs scripts/test-user-api-events.cjs
           npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output build/main.jsbundle --assets-dest build/bundle-assets 2>&1 | tee build/metro.log
       - name: Build iPhone app
+        if: matrix.target == 'device'
         run: |
           set -euo pipefail
           xcodebuild -workspace ios/LxMusicMobile.xcworkspace -scheme LxMusicMobile \
@@ -80,6 +86,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
             build 2>&1 | tee build/xcodebuild.log
       - name: Package unsigned IPA
+        if: matrix.target == 'device'
         run: |
           set -euxo pipefail
           app_path=build/DerivedData/Build/Products/Release-iphoneos/LxMusicMobile.app
@@ -94,6 +101,7 @@ jobs:
           unzip -t build/LXMusic-iOS-unsigned.ipa
           shasum -a 256 build/LXMusic-iOS-unsigned.ipa > build/LXMusic-iOS-unsigned.ipa.sha256
       - name: Upload IPA
+        if: matrix.target == 'device'
         uses: actions/upload-artifact@v7
         with:
           name: LXMusic-iOS-unsigned
@@ -104,12 +112,13 @@ jobs:
           retention-days: 7
           compression-level: 0
       - name: Verify launch and playback in iPhone simulator
+        if: matrix.target == 'simulator'
         run: bash scripts/smoke-ios.sh
       - name: Upload build diagnostics
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: LXMusic-iOS-build-logs
+          name: LXMusic-iOS-${{ matrix.target }}-logs
           path: |
             build/*.log
             build/*.png

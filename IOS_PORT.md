@@ -6,6 +6,18 @@
 
 推送 `lx-ios-port` 分支后，GitHub Actions 的 `Build LX Music iOS port` 工作流会安装依赖、编译 Release 真机版本并上传 `LXMusic-iOS-unsigned` 产物。下载 ZIP 后解压，将 `LXMusic-iOS-unsigned.ipa` 交给 Sideloadly，用自己的 Apple 账号签名安装。免费账号通常需要每 7 天续签。
 
+要求 iOS 15 或更高版本。Windows 安装步骤：
+
+1. 用数据线连接并解锁 iPhone，在手机上选择“信任此电脑”。
+2. 打开 Sideloadly，确认设备列表显示你的 iPhone，将 IPA 拖到左侧图标。
+3. Apple Account 填写自己的免费 Apple 账号（可使用 iPhone 登录的账号），点击 Start。密码和验证码在 Sideloadly/Apple 界面内输入。
+4. 按手机提示在“设置 → 通用 → VPN 与设备管理”中信任开发者；iOS 16 及以后如有提示，还需在“设置 → 隐私与安全性 → 开发者模式”中启用并重启。
+5. 回到桌面打开 LX Music。此分支没有内置自定义源，联网搜索与播放需要你自行导入有权使用且兼容的自定义源。
+
+首次安装后请在到期前重新连接 Sideloadly 续签，保持相同 Apple 账号和包标识。
+
+账号有效期说明见 [Sideloadly 官方 FAQ](https://sideloadly.io/faq)，开发者模式说明见 [Apple 官方文档](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device)。
+
 开发目录：`ios/Port` 为 iOS 原生桥接，`src/utils/fs.ios.ts` 为沙盒文件系统，`src/utils/nativeModules/lyricDesktop.ios.ts` 为 iOS 平台限制提示。上游 Android 实现继续保留。
 
 ## 本分支的适配内容
@@ -28,6 +40,8 @@
 
 ## 验证
 
-工作流成功表示依赖安装、Release 编译及 IPA 的 arm64/资源检查成功，不能代替真机测试。安装后需验证首次启动、导入兼容自定义源、搜索、播放、锁屏控制、本地文件及同步。尚未验证的功能不得视为已通过。
+工作流包含原生加密互操作测试、Release 真机编译、IPA 的 arm64/资源检查，以及 iPhone 模拟器中的启动和基础功能检查。模拟器检查覆盖 AES/RSA 桥接、沙盒文件/gzip、自定义源初始化/定时器/请求响应和本地 WAV 播放/暂停/定位，报告在构建诊断产物的 `lx-ios-smoke.json` 中。
+
+模拟器检查不能代替真机测试，也不证明实际音乐服务兼容。安装后需验证导入兼容自定义源、搜索、真实音频播放、锁屏控制、本地文件及同步。尚未验证的功能不得视为已通过。
 
 保留上游 README、LICENSE 和原作者声明。请使用你有权访问的音乐与音源。

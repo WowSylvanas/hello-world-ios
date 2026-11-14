@@ -107,6 +107,6 @@ export const runSmokeTests = async() => {
     checks.push('AVPlayer local playback, seconds, pause and seek')
     await RNFS.writeFile(reportPath, JSON.stringify({ status: 'passed', checks, boot: getBootLog() }))
   } catch (error: any) {
-    await RNFS.writeFile(reportPath, JSON.stringify({ status: 'failed', checks, error: error.stack ?? error.message, boot: getBootLog() }))
+    await RNFS.writeFile(reportPath, JSON.stringify({ status: 'failed', checks, error: String(error), stack: error.stack, boot: getBootLog() }))
   }
 }
